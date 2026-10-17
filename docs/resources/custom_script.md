@@ -47,6 +47,8 @@ resource "iru_custom_script" "hello" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # Custom scripts are imported by their library item ID.
 terraform import iru_custom_script.hello 00000000-0000-0000-0000-000000000000
