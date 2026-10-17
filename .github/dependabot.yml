@@ -1,10 +1,22 @@
 version: 2
 updates:
+  # Cooldown: propose a release only once it has been out 7 days, past the window in which
+  # most malicious releases are caught and pulled. Security updates are not delayed.
   - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
+  - package-ecosystem: gomod
+    directory: /tools
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7
