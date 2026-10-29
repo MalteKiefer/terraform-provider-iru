@@ -24,6 +24,8 @@ type Blueprint struct {
 type EnrollmentCode struct {
 	Code     string `json:"code,omitempty"`
 	IsActive bool   `json:"is_active"`
+	// OmitIsActive leaves is_active out of a blueprint write so the server keeps it.
+	OmitIsActive bool `json:"-"`
 }
 
 // BlueprintCreate carries fields for creating a blueprint. Maps require a source
@@ -48,7 +50,9 @@ func blueprintForm(b Blueprint, sourceType, sourceID string) []byte {
 		v.Set("type", b.Type)
 	}
 	if b.EnrollmentCode != nil {
-		v.Set("enrollment_code.is_active", strconv.FormatBool(b.EnrollmentCode.IsActive))
+		if !b.EnrollmentCode.OmitIsActive {
+			v.Set("enrollment_code.is_active", strconv.FormatBool(b.EnrollmentCode.IsActive))
+		}
 		if b.EnrollmentCode.Code != "" {
 			v.Set("enrollment_code.code", b.EnrollmentCode.Code)
 		}

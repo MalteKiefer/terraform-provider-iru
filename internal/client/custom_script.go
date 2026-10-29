@@ -5,7 +5,7 @@ import "context"
 const customScriptsPath = "/api/v1/library/custom-scripts"
 
 // CreateCustomScript creates a script and returns the server representation.
-func (c *Client) CreateCustomScript(ctx context.Context, in CustomScript) (*CustomScript, error) {
+func (c *Client) CreateCustomScript(ctx context.Context, in CustomScriptInput) (*CustomScript, error) {
 	var out CustomScript
 	if err := c.DoJSON(ctx, "POST", customScriptsPath, in, &out); err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (c *Client) GetCustomScript(ctx context.Context, id string) (*CustomScript,
 }
 
 // UpdateCustomScript patches a script by id.
-func (c *Client) UpdateCustomScript(ctx context.Context, id string, in CustomScript) (*CustomScript, error) {
+func (c *Client) UpdateCustomScript(ctx context.Context, id string, in CustomScriptInput) (*CustomScript, error) {
 	var out CustomScript
 	if err := c.DoJSON(ctx, "PATCH", customScriptsPath+"/"+id, in, &out); err != nil {
 		return nil, err

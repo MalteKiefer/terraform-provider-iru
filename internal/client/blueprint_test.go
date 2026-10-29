@@ -88,3 +88,14 @@ func contains(s, sub string) bool {
 	}
 	return false
 }
+
+func TestBlueprintForm_OmitsUnsetIsActive(t *testing.T) {
+	body := string(blueprintForm(Blueprint{Name: "b", EnrollmentCode: &EnrollmentCode{Code: "1234", OmitIsActive: true}}, "", ""))
+	if contains(body, "is_active") {
+		t.Errorf("body = %s, want no enrollment_code.is_active", body)
+	}
+	body = string(blueprintForm(Blueprint{Name: "b", EnrollmentCode: &EnrollmentCode{Code: "1234", IsActive: true}}, "", ""))
+	if !contains(body, "enrollment_code.is_active=true") {
+		t.Errorf("body = %s, want enrollment_code.is_active=true", body)
+	}
+}

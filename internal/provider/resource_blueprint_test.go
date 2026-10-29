@@ -1,8 +1,10 @@
 package provider
 
 import (
+	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -28,5 +30,26 @@ func TestCheckBlueprintType(t *testing.T) {
 				t.Errorf("error = %v, want %v: %v", diags.HasError(), tc.wantErr, diags)
 			}
 		})
+	}
+}
+
+// An enrollment_code block without is_active must not send is_active=false and so
+// deactivate the code.
+func TestBlueprintFromModel_UnsetIsActiveIsOmitted(t *testing.T) {
+	for _, isActive := range []types.Bool{types.BoolUnknown(), types.BoolNull()} {
+		ec, d := types.ObjectValue(enrollmentCodeAttrTypes, map[string]attr.Value{
+			"code":      types.StringValue("1234"),
+			"is_active": isActive,
+		})
+		if d.HasError() {
+			t.Fatal(d)
+		}
+		b, diags := blueprintFromModel(context.Background(), blueprintModel{EnrollmentCode: ec})
+		if diags.HasError() {
+			t.Fatal(diags)
+		}
+		if b.EnrollmentCode == nil || !b.EnrollmentCode.OmitIsActive {
+			t.Errorf("is_active %v: OmitIsActive not set: %+v", isActive, b.EnrollmentCode)
+		}
 	}
 }

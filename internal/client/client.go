@@ -105,14 +105,29 @@ func (c *Client) do(ctx context.Context, method, path, contentType string, body 
 
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
+			// The server may have committed a POST before the connection failed, so
+			// replaying it could create a duplicate.
+			if !retryable(method) {
+				return err
+			}
 			lastErr = err
 			continue // network error — retry
 		}
 
-		respBody, _ := io.ReadAll(resp.Body)
+		respBody, err := io.ReadAll(resp.Body)
 		_ = resp.Body.Close()
+		if err != nil {
+			err = fmt.Errorf("reading response (status %d): %w", resp.StatusCode, err)
+			if !retryable(method) {
+				return err
+			}
+			lastErr = err
+			continue
+		}
 
-		if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
+		// A 429 means the request was not processed, so even a POST is safe to replay.
+		if resp.StatusCode == http.StatusTooManyRequests ||
+			(resp.StatusCode >= 500 && retryable(method)) {
 			lastErr = &APIError{StatusCode: resp.StatusCode, Body: string(respBody)}
 			if ra := resp.Header.Get("Retry-After"); ra != "" {
 				if secs, perr := strconv.Atoi(ra); perr == nil {
@@ -143,4 +158,10 @@ func (c *Client) do(ctx context.Context, method, path, contentType string, body 
 	}
 
 	return fmt.Errorf("request failed after %d retries: %w", maxRetries, lastErr)
+}
+
+// retryable reports whether a request can be replayed after a network error or 5xx
+// without risking a duplicate side effect. POST creates objects and is not.
+func retryable(method string) bool {
+	return method != http.MethodPost
 }

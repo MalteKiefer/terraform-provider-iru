@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
@@ -110,8 +111,10 @@ func (r *customScriptResource) Schema(ctx context.Context, req resource.SchemaRe
 				Optional: true,
 				Computed: true,
 				MarkdownDescription: "Whether the script is marked recommended in Self Service. " +
-					"Write-only in the API (see `self_service_category_id`).",
-				PlanModifiers: []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
+					"Write-only in the API (see `self_service_category_id`). Defaults to `false`.",
+				// A default rather than UseStateForUnknown: removing the attribute must turn
+				// the flag off, not carry a stale true into a request with Self Service off.
+				Default: booldefault.StaticBool(false),
 			},
 		},
 	}
@@ -223,19 +226,25 @@ func (r *customScriptResource) IdentitySchema(ctx context.Context, req resource.
 }
 
 // modelToCustomScript builds the API request from the plan, sending only the fields
-// the caller set so server defaults aren't clobbered.
-func modelToCustomScript(m customScriptModel) client.CustomScript {
-	return client.CustomScript{
-		Name:                   m.Name.ValueString(),
-		ExecutionFrequency:     m.ExecutionFrequency.ValueString(),
-		Script:                 m.Script.ValueString(),
-		RemediationScript:      m.RemediationScript.ValueString(),
-		ShowInSelfService:      m.ShowInSelfService.ValueBool(),
-		SelfServiceCategoryID:  m.SelfServiceCategoryID.ValueString(),
-		SelfServiceRecommended: m.SelfServiceRecommended.ValueBool(),
-		Active:                 m.Active.ValueBool(),
-		Restart:                m.Restart.ValueBool(),
+// that are known so server defaults aren't clobbered by unset (unknown) values.
+func modelToCustomScript(m customScriptModel) client.CustomScriptInput {
+	in := client.CustomScriptInput{
+		Name:               m.Name.ValueString(),
+		ExecutionFrequency: m.ExecutionFrequency.ValueString(),
+		Script:             m.Script.ValueString(),
+		RemediationScript:  knownString(m.RemediationScript),
+		ShowInSelfService:  knownBool(m.ShowInSelfService),
+		Active:             knownBool(m.Active),
+		Restart:            knownBool(m.Restart),
 	}
+	if m.SelfServiceCategoryID.ValueString() != "" {
+		in.SelfServiceCategoryID = knownString(m.SelfServiceCategoryID)
+	}
+	// The API rejects self_service_recommended, even false, unless Self Service is on.
+	if m.ShowInSelfService.ValueBool() {
+		in.SelfServiceRecommended = knownBool(m.SelfServiceRecommended)
+	}
+	return in
 }
 
 // applyCustomScriptResponse maps the server response into dst, while carrying forward

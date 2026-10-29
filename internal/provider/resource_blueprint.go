@@ -11,6 +11,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -129,6 +130,7 @@ func (r *blueprintResource) Schema(ctx context.Context, req resource.SchemaReque
 						Optional:            true,
 						Computed:            true,
 						MarkdownDescription: "Whether the enrollment code is active.",
+						PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 					},
 				},
 			},
@@ -279,8 +281,9 @@ func blueprintFromModel(ctx context.Context, m blueprintModel) (client.Blueprint
 		d := m.EnrollmentCode.As(ctx, &ec, basetypes.ObjectAsOptions{})
 		diags = append(diags, d...)
 		b.EnrollmentCode = &client.EnrollmentCode{
-			Code:     ec.Code.ValueString(),
-			IsActive: ec.IsActive.ValueBool(),
+			Code:         ec.Code.ValueString(),
+			IsActive:     ec.IsActive.ValueBool(),
+			OmitIsActive: ec.IsActive.IsNull() || ec.IsActive.IsUnknown(),
 		}
 	}
 	return b, diags

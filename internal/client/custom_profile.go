@@ -11,15 +11,16 @@ import (
 const customProfilesPath = "/api/v1/library/custom-profiles"
 
 // CustomProfileInput carries the fields for create/update. ProfileXML is the raw
-// .mobileconfig content, uploaded as the multipart `file` field.
+// .mobileconfig content, uploaded as the multipart `file` field. A nil bool is left
+// out of the request so the server keeps its value.
 type CustomProfileInput struct {
 	Name         string
 	ProfileXML   string
-	Active       bool
-	RunsOnMac    bool
-	RunsOnIPhone bool
-	RunsOnIPad   bool
-	RunsOnTV     bool
+	Active       *bool
+	RunsOnMac    *bool
+	RunsOnIPhone *bool
+	RunsOnIPad   *bool
+	RunsOnTV     *bool
 	IncludeFile  bool // when false (update without a file change), omit the file part
 }
 
@@ -28,11 +29,20 @@ func buildProfileMultipart(in CustomProfileInput) (string, []byte, error) {
 	w := multipart.NewWriter(&buf)
 
 	_ = w.WriteField("name", in.Name)
-	_ = w.WriteField("active", strconv.FormatBool(in.Active))
-	_ = w.WriteField("runs_on_mac", strconv.FormatBool(in.RunsOnMac))
-	_ = w.WriteField("runs_on_iphone", strconv.FormatBool(in.RunsOnIPhone))
-	_ = w.WriteField("runs_on_ipad", strconv.FormatBool(in.RunsOnIPad))
-	_ = w.WriteField("runs_on_tv", strconv.FormatBool(in.RunsOnTV))
+	for _, f := range []struct {
+		name string
+		v    *bool
+	}{
+		{"active", in.Active},
+		{"runs_on_mac", in.RunsOnMac},
+		{"runs_on_iphone", in.RunsOnIPhone},
+		{"runs_on_ipad", in.RunsOnIPad},
+		{"runs_on_tv", in.RunsOnTV},
+	} {
+		if f.v != nil {
+			_ = w.WriteField(f.name, strconv.FormatBool(*f.v))
+		}
+	}
 
 	if in.IncludeFile {
 		fw, err := w.CreateFormFile("file", in.Name+".mobileconfig")

@@ -36,7 +36,7 @@ resource "iru_custom_script" "hello" {
 - `remediation_script` (String) Optional remediation script body. The API returns an empty string when unset; leaving this unconfigured adopts that value.
 - `restart` (Boolean) Whether to restart after running.
 - `self_service_category_id` (String) Self Service category ID (from the `iru_self_service_categories` data source). Write-only in the API: it is accepted on write but not returned, so the configured value is preserved in state.
-- `self_service_recommended` (Boolean) Whether the script is marked recommended in Self Service. Write-only in the API (see `self_service_category_id`).
+- `self_service_recommended` (Boolean) Whether the script is marked recommended in Self Service. Write-only in the API (see `self_service_category_id`). Defaults to `false`.
 - `show_in_self_service` (Boolean) Whether the script is offered in Self Service.
 
 ### Read-Only

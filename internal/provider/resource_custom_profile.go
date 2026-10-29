@@ -8,6 +8,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/boolplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -63,26 +64,31 @@ func (r *customProfileResource) Schema(ctx context.Context, req resource.SchemaR
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Whether the profile is active.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"runs_on_mac": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Install on macOS devices.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"runs_on_iphone": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Install on iPhone devices.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"runs_on_ipad": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Install on iPad devices.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 			"runs_on_tv": schema.BoolAttribute{
 				Optional:            true,
 				Computed:            true,
 				MarkdownDescription: "Install on Apple TV devices.",
+				PlanModifiers:       []planmodifier.Bool{boolplanmodifier.UseStateForUnknown()},
 			},
 		},
 	}
@@ -183,11 +189,11 @@ func profileInput(m customProfileModel, includeFile bool) client.CustomProfileIn
 	return client.CustomProfileInput{
 		Name:         m.Name.ValueString(),
 		ProfileXML:   m.ProfileFile.ValueString(),
-		Active:       m.Active.ValueBool(),
-		RunsOnMac:    m.RunsOnMac.ValueBool(),
-		RunsOnIPhone: m.RunsOnIPhone.ValueBool(),
-		RunsOnIPad:   m.RunsOnIPad.ValueBool(),
-		RunsOnTV:     m.RunsOnTV.ValueBool(),
+		Active:       knownBool(m.Active),
+		RunsOnMac:    knownBool(m.RunsOnMac),
+		RunsOnIPhone: knownBool(m.RunsOnIPhone),
+		RunsOnIPad:   knownBool(m.RunsOnIPad),
+		RunsOnTV:     knownBool(m.RunsOnTV),
 		IncludeFile:  includeFile,
 	}
 }

@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"encoding/json"
 	"testing"
 
 	"github.com/dmcphearson/terraform-provider-iru/internal/client"
@@ -68,5 +69,52 @@ func TestApplyCustomScriptResponse_RemediationAdoptsEmptyString(t *testing.T) {
 
 	if dst.RemediationScript.IsNull() || dst.RemediationScript.ValueString() != "" {
 		t.Errorf("remediation_script = %v, want empty string adopted", dst.RemediationScript)
+	}
+}
+
+// Unset (unknown) attributes must not be sent, so the server keeps its defaults, while
+// known zero values must be sent so fields can be cleared or switched off.
+func TestModelToCustomScript_SendsOnlyKnownValues(t *testing.T) {
+	m := customScriptModel{
+		Name:                   types.StringValue("s"),
+		ExecutionFrequency:     types.StringValue("once"),
+		Script:                 types.StringValue("echo"),
+		RemediationScript:      types.StringValue(""),
+		Active:                 types.BoolUnknown(),
+		Restart:                types.BoolUnknown(),
+		ShowInSelfService:      types.BoolValue(true),
+		SelfServiceCategoryID:  types.StringUnknown(),
+		SelfServiceRecommended: types.BoolValue(false),
+	}
+	b, err := json.Marshal(modelToCustomScript(m))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got map[string]any
+	if err := json.Unmarshal(b, &got); err != nil {
+		t.Fatal(err)
+	}
+	for _, k := range []string{"active", "restart", "self_service_category_id"} {
+		if _, ok := got[k]; ok {
+			t.Errorf("%s sent although unset: %s", k, b)
+		}
+	}
+	if v, ok := got["remediation_script"]; !ok || v != "" {
+		t.Errorf("remediation_script = %v, want \"\" sent to clear it: %s", v, b)
+	}
+	if v, ok := got["self_service_recommended"]; !ok || v != false {
+		t.Errorf("self_service_recommended = %v, want false sent: %s", v, b)
+	}
+}
+
+// The API rejects self_service_recommended unless Self Service is on, so turning Self
+// Service off must not send it.
+func TestModelToCustomScript_NoRecommendedWithoutSelfService(t *testing.T) {
+	m := customScriptModel{
+		ShowInSelfService:      types.BoolValue(false),
+		SelfServiceRecommended: types.BoolValue(true),
+	}
+	if in := modelToCustomScript(m); in.SelfServiceRecommended != nil {
+		t.Errorf("self_service_recommended = %v, want omitted when Self Service is off", *in.SelfServiceRecommended)
 	}
 }
